@@ -19,7 +19,6 @@ import (
 
 	"github.com/brocaar/lorawan"
 	"github.com/brocaar/lorawan/applayer/clocksync"
-	"github.com/brocaar/lorawan/applayer/fragmentation"
 	"github.com/brocaar/lorawan/gps"
 )
 
@@ -110,7 +109,7 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 	_, err = as.DeviceQueueClient().Enqueue(ctx, &api.EnqueueDeviceQueueItemRequest{
 		DeviceQueueItem: &api.DeviceQueueItem{
 			DevEui: devEUI.String(),
-			FPort:  uint32(fragmentation.DefaultFPort),
+			FPort:  uint32(clocksync.DefaultFPort),
 			Data:   b,
 		},
 	})
