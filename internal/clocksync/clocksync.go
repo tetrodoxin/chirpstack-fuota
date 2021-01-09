@@ -59,7 +59,7 @@ func handleClocksyncSetupCommand(ctx context.Context, devEUI lorawan.EUI64, b []
 	log.WithFields(log.Fields{
 		"dev_eui": devEUI,
 		"cid":     cmd.CID,
-	}).Info("fuota: clocksync-setup command received")
+	}).Info("clocksync: clocksync-setup command received")
 
 	switch cmd.CID {
 	case clocksync.AppTimeReq:
@@ -132,6 +132,7 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 				"dev_diff": deviceDiff,
 			}).Warn("clocksync: could not update ClocksyncDevice db entry.")
 		}
+		break
 
 	case sql.ErrNoRows:
 		csd = storage.ClocksyncDevice{
@@ -147,12 +148,13 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 				"dev_diff": deviceDiff,
 			}).Warn("clocksync: could not create ClocksyncDevice db entry.")
 		}
+		break
 
 	default:
 		log.WithError(err).WithFields(log.Fields{
 			"DevEUI":   devEUI,
 			"dev_diff": deviceDiff,
-		}).Warn("clocksync: device requested no answer and delta was low.")
+		}).Warn("clocksync: could not read ClocksyncDevice from db.")
 	}
 
 	return nil
