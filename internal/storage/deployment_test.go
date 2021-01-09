@@ -36,6 +36,7 @@ func (ts *StorageTestSuite) TestDeployment() {
 			assert.Nil(dGet.FragSessionSetupCompletedAt)
 			assert.Nil(dGet.EnqueueCompletedAt)
 			assert.Nil(dGet.FragStatusCompletedAt)
+			assert.Nil(dGet.ClocksyncCompletedAt)
 		})
 
 		t.Run("Update", func(t *testing.T) {
@@ -47,6 +48,7 @@ func (ts *StorageTestSuite) TestDeployment() {
 			d.FragSessionSetupCompletedAt = &now
 			d.EnqueueCompletedAt = &now
 			d.FragStatusCompletedAt = &now
+			d.ClocksyncCompletedAt = &now
 
 			assert.NoError(UpdateDeployment(context.Background(), ts.Tx(), &d))
 
@@ -58,6 +60,7 @@ func (ts *StorageTestSuite) TestDeployment() {
 			assert.True(dGet.FragSessionSetupCompletedAt.Equal(now))
 			assert.True(dGet.EnqueueCompletedAt.Equal(now))
 			assert.True(dGet.FragStatusCompletedAt.Equal(now))
+			assert.True(dGet.ClocksyncCompletedAt.Equal(now))
 		})
 	})
 }

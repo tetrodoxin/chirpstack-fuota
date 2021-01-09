@@ -11,6 +11,7 @@ import (
 
 	"github.com/brocaar/chirpstack-fuota-server/internal/api"
 	"github.com/brocaar/chirpstack-fuota-server/internal/client/as"
+	"github.com/brocaar/chirpstack-fuota-server/internal/clocksync"
 	"github.com/brocaar/chirpstack-fuota-server/internal/config"
 	"github.com/brocaar/chirpstack-fuota-server/internal/eventhandler"
 	"github.com/brocaar/chirpstack-fuota-server/internal/storage"
@@ -25,6 +26,7 @@ func run(cmd *cobra.Command, args []string) error {
 		setupApplicationServerClient,
 		setupEventHandler,
 		setupAPI,
+		setupClocksync,
 	}
 
 	for _, t := range tasks {
@@ -69,6 +71,13 @@ func setupEventHandler() error {
 func setupApplicationServerClient() error {
 	if err := as.Setup(&config.C); err != nil {
 		return fmt.Errorf("setup application-server client error: %w", err)
+	}
+	return nil
+}
+
+func setupClocksync() error {
+	if err := clocksync.Setup(&config.C); err != nil {
+		return fmt.Errorf("setup clocksync error: %w", err)
 	}
 	return nil
 }

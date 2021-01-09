@@ -46,6 +46,7 @@ func (ts *StorageTestSuite) TestDeploymentDevice() {
 			dd.MCSessionCompletedAt = &now
 			dd.FragSessionSetupCompletedAt = &now
 			dd.FragStatusCompletedAt = &now
+			dd.ClocksyncCompletedAt = &now
 
 			assert.NoError(UpdateDeploymentDevice(context.Background(), ts.Tx(), &dd))
 
@@ -56,6 +57,7 @@ func (ts *StorageTestSuite) TestDeploymentDevice() {
 			assert.True(ddGet.MCSessionCompletedAt.Equal(now))
 			assert.True(ddGet.FragSessionSetupCompletedAt.Equal(now))
 			assert.True(ddGet.FragStatusCompletedAt.Equal(now))
+			assert.True(ddGet.ClocksyncCompletedAt.Equal(now))
 		})
 
 		t.Run("GetDeploymentDevices", func(t *testing.T) {

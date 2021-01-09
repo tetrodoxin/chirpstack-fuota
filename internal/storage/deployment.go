@@ -20,6 +20,7 @@ type Deployment struct {
 	FragSessionSetupCompletedAt *time.Time `db:"frag_session_setup_completed_at"`
 	EnqueueCompletedAt          *time.Time `db:"enqueue_completed_at"`
 	FragStatusCompletedAt       *time.Time `db:"frag_status_completed_at"`
+	ClocksyncCompletedAt        *time.Time `db:"clocksync_completed_at"`
 }
 
 // CreateDeployment creates the given Deployment.
@@ -46,8 +47,9 @@ func CreateDeployment(ctx context.Context, db sqlx.Execer, d *Deployment) error 
 			mc_session_completed_at,
 			frag_session_setup_completed_at,
 			enqueue_completed_at,
-			frag_status_completed_at
-		) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			frag_status_completed_at,
+			clocksync_completed_at
+		) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		d.ID,
 		d.CreatedAt,
 		d.UpdatedAt,
@@ -56,6 +58,7 @@ func CreateDeployment(ctx context.Context, db sqlx.Execer, d *Deployment) error 
 		d.FragSessionSetupCompletedAt,
 		d.EnqueueCompletedAt,
 		d.FragStatusCompletedAt,
+		d.ClocksyncCompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("sql exec error: %w", err)
@@ -90,7 +93,8 @@ func UpdateDeployment(ctx context.Context, db sqlx.Execer, d *Deployment) error 
 			mc_session_completed_at = $4,
 			frag_session_setup_completed_at = $5,
 			enqueue_completed_at = $6,
-			frag_status_completed_at = $7
+			frag_status_completed_at = $7,
+			clocksync_completed_at = $8
 		where
 			id = $1`,
 		d.ID,
@@ -100,6 +104,7 @@ func UpdateDeployment(ctx context.Context, db sqlx.Execer, d *Deployment) error 
 		d.FragSessionSetupCompletedAt,
 		d.EnqueueCompletedAt,
 		d.FragStatusCompletedAt,
+		d.ClocksyncCompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("sql update error: %w", err)

@@ -22,6 +22,7 @@ type DeploymentDevice struct {
 	MCSessionCompletedAt        *time.Time    `db:"mc_session_completed_at"`
 	FragSessionSetupCompletedAt *time.Time    `db:"frag_session_setup_completed_at"`
 	FragStatusCompletedAt       *time.Time    `db:"frag_status_completed_at"`
+	ClocksyncCompletedAt        *time.Time    `db:"clocksync_completed_at"`
 }
 
 // CreateDeploymentDevice creates the given DeploymentDevice.
@@ -39,8 +40,9 @@ func CreateDeploymentDevice(ctx context.Context, db sqlx.Execer, dd *DeploymentD
 			mc_group_setup_completed_at,
 			mc_session_completed_at,
 			frag_session_setup_completed_at,
-			frag_status_completed_at
-		) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			frag_status_completed_at,
+			clocksync_completed_at
+		) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		dd.DeploymentID,
 		dd.DevEUI,
 		dd.CreatedAt,
@@ -49,6 +51,7 @@ func CreateDeploymentDevice(ctx context.Context, db sqlx.Execer, dd *DeploymentD
 		dd.MCSessionCompletedAt,
 		dd.FragSessionSetupCompletedAt,
 		dd.FragStatusCompletedAt,
+		dd.ClocksyncCompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("sql exec error: %w", err)
@@ -83,7 +86,8 @@ func UpdateDeploymentDevice(ctx context.Context, db sqlx.Execer, dd *DeploymentD
 			mc_group_setup_completed_at = $4,
 			mc_session_completed_at = $5,
 			frag_session_setup_completed_at = $6,
-			frag_status_completed_at = $7
+			frag_status_completed_at = $7,
+			clocksync_completed_at = $8
 		where
 			deployment_id = $1 and dev_eui = $2`,
 		dd.DeploymentID,
@@ -93,6 +97,7 @@ func UpdateDeploymentDevice(ctx context.Context, db sqlx.Execer, dd *DeploymentD
 		dd.MCSessionCompletedAt,
 		dd.FragSessionSetupCompletedAt,
 		dd.FragStatusCompletedAt,
+		dd.ClocksyncCompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("sql update error: %w", err)
