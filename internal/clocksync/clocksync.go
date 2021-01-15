@@ -42,10 +42,19 @@ func HandleUplinkEvent(ctx context.Context, pl integration.UplinkEvent) error {
 		var devEUI lorawan.EUI64
 		copy(devEUI[:], pl.DevEui)
 
+		if len(pl.Data) == 0 {
+			log.WithFields(log.Fields{
+				"dev_eui": devEUI,
+			}).Info("clocksync: received empty frame on port %d. Nothing done.", uint8(pl.FPort))
+
+			return nil
+		}
+
 		if err := handleClocksyncSetupCommand(ctx, devEUI, pl.Data); err != nil {
 			return fmt.Errorf("handle clocksync setup command error: %w", err)
 		}
 	}
+
 	return nil
 }
 
@@ -73,11 +82,14 @@ func handleClocksyncSetupCommand(ctx context.Context, devEUI lorawan.EUI64, b []
 }
 
 func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync.AppTimeReqPayload) error {
+	devTimeString := time.Time(gps.NewTimeFromTimeSinceGPSEpoch(time.Duration(pl.DeviceTime) * time.Second)).Format(time.RFC3339)
+
 	log.WithFields(log.Fields{
-		"DevEUI":      devEUI,
-		"DeviceTime":  pl.DeviceTime,
-		"AnsRequired": pl.Param.AnsRequired,
-		"TokenReq":    pl.Param.TokenReq,
+		"DevEUI":        devEUI,
+		"DeviceTime":    pl.DeviceTime,
+		"DeviceTimeStr": devTimeString,
+		"AnsRequired":   pl.Param.AnsRequired,
+		"TokenReq":      pl.Param.TokenReq,
 	}).Info("clocksync: AppTimeReqPayload received")
 
 	gpsNow := uint32((gps.Time(time.Now()).TimeSinceGPSEpoch() / time.Second) & 0xffffffff)
@@ -155,6 +167,11 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 			"dev_diff": deviceDiff,
 		}).Warn("clocksync: could not read ClocksyncDevice from db.")
 	}
+
+	log.WithFields(log.Fields{
+		"DevEUI":         devEUI,
+		"TimeCorrection": deviceDiff,
+	}).Info("clocksync: AppTimeAns sent.")
 
 	return nil
 }
