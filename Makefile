@@ -1,4 +1,5 @@
 .PHONY: build clean generate statics test snapshot dist dev-requirements
+VERSION := $(shell cat .version)
 
 build:
 	@echo "Compiling source"
