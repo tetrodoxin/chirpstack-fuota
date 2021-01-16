@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gofrs/uuid"
+	"github.com/golang/protobuf/ptypes"
 
 	"github.com/brocaar/chirpstack-api/go/v3/as/external/api"
 	"github.com/brocaar/chirpstack-api/go/v3/as/integration"
@@ -58,9 +59,9 @@ func HandleUplinkEvent(ctx context.Context, pl integration.UplinkEvent) error {
 	return nil
 }
 
-func handleClocksyncSetupCommand(ctx context.Context, devEUI lorawan.EUI64, b []byte) error {
+func handleClocksyncSetupCommand(ctx context.Context, devEUI lorawan.EUI64, ev integration.UplinkEvent) error {
 	var cmd clocksync.Command
-	if err := cmd.UnmarshalBinary(true, b); err != nil {
+	if err := cmd.UnmarshalBinary(true, ev.Data); err != nil {
 		return fmt.Errorf("unmarshal command error: %w", err)
 	}
 
@@ -75,13 +76,16 @@ func handleClocksyncSetupCommand(ctx context.Context, devEUI lorawan.EUI64, b []
 		if !ok {
 			return fmt.Errorf("expected *clocksync.AppTimeReqPayload, got: %T", cmd.Payload)
 		}
-		return handleCsAppTimeReq(ctx, devEUI, pl)
+
+		gpsTimeOfRx := getRxGpsTimeOfUplinkEvent(ev)
+
+		return handleCsAppTimeReq(ctx, devEUI, gpsTimeOfRx, pl)
 	}
 
 	return nil
 }
 
-func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync.AppTimeReqPayload) error {
+func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, gpsTimeOfRx time.Duration, pl *clocksync.AppTimeReqPayload) error {
 	devTimeString := time.Time(gps.NewTimeFromTimeSinceGPSEpoch(time.Duration(pl.DeviceTime) * time.Second)).Format(time.RFC3339)
 
 	log.WithFields(log.Fields{
@@ -92,8 +96,8 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 		"TokenReq":      pl.Param.TokenReq,
 	}).Info("clocksync: AppTimeReqPayload received")
 
-	gpsNow := uint32((gps.Time(time.Now()).TimeSinceGPSEpoch() / time.Second) & 0xffffffff)
-	deviceDiff := (int32)(gpsNow - pl.DeviceTime)
+	networkGpsTime := uint32((gpsTimeOfRx / time.Second) & 0xffffffff)
+	deviceDiff := (int32)(networkGpsTime - pl.DeviceTime)
 
 	if !pl.Param.AnsRequired && deviceDiff < 5 && deviceDiff > -5 {
 		log.WithFields(log.Fields{
@@ -103,7 +107,7 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 		return nil
 	}
 
-	cmd := clocksync.Command{
+	ansCmd := clocksync.Command{
 		CID: clocksync.AppTimeAns,
 		Payload: &clocksync.AppTimeAnsPayload{
 			TimeCorrection: deviceDiff,
@@ -113,7 +117,7 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 		},
 	}
 
-	b, err := cmd.MarshalBinary()
+	b, err := ansCmd.MarshalBinary()
 	if err != nil {
 		return fmt.Errorf("marshal binary error: %w", err)
 	}
@@ -174,4 +178,38 @@ func handleCsAppTimeReq(ctx context.Context, devEUI lorawan.EUI64, pl *clocksync
 	}).Info("clocksync: AppTimeAns sent.")
 
 	return nil
+}
+
+func getRxGpsTimeOfUplinkEvent(pl integration.UplinkEvent) time.Duration {
+	// get uplink time
+	var gpsTime time.Duration
+	var timeField time.Time
+	var err error
+
+	for _, rxInfo := range pl.RxInfo {
+		if rxInfo.TimeSinceGpsEpoch != nil {
+			gpsTime, err = ptypes.Duration(rxInfo.TimeSinceGpsEpoch)
+			if err != nil {
+				log.WithError(err).Error("clocksync: time since gps epoch to duration error")
+				continue
+			}
+		} else if rxInfo.Time != nil {
+			timeField, err = ptypes.Timestamp(rxInfo.Time)
+			if err != nil {
+				log.WithError(err).Error("clocksync: time to timestamp error")
+				continue
+			}
+		}
+	}
+
+	// fallback on time field when time since GPS epoch is not available
+	if gpsTime == 0 {
+		// fallback on current server time when time field is not available
+		if timeField.IsZero() {
+			timeField = time.Now()
+		}
+		gpsTime = gps.Time(timeField).TimeSinceGPSEpoch()
+	}
+
+	return gpsTime
 }

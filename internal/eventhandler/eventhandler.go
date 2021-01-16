@@ -16,7 +16,6 @@ import (
 
 	"github.com/brocaar/chirpstack-api/go/v3/as/integration"
 	"github.com/brocaar/chirpstack-fuota-server/internal/config"
-	"github.com/brocaar/lorawan/applayer/clocksync"
 )
 
 var handler *Handler
@@ -138,24 +137,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.RLock()
 	defer h.RUnlock()
 
-	if uint8(uplinkEvent.FPort) == clocksync.DefaultFPort {
-		// Handle the clocksync in any case as it is requested by the device. Depending
-		// the device implementation, the request might be received even before the
-		// FUOTA deployment is created.
+	for id, f := range h.eventHandlers {
 		go func(pl integration.UplinkEvent) {
-			if err := handleClockSyncCommand(context.Background(), pl); err != nil {
-				log.WithError(err).Error("handle clocksync error")
+			if err := f(context.Background(), pl); err != nil {
+				log.WithError(err).WithField("id", id).Error("integration/eventhandler: uplink event handler error")
 			}
 		}(uplinkEvent)
-
-	} else {
-		for id, f := range h.eventHandlers {
-			go func(pl integration.UplinkEvent) {
-				if err := f(context.Background(), pl); err != nil {
-					log.WithError(err).WithField("id", id).Error("integration/eventhandler: uplink event handler error")
-				}
-			}(uplinkEvent)
-		}
 	}
 
 }
